@@ -4,6 +4,7 @@ import org.apache.commons.io.IOUtils
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import kotlin.math.max
 
 class Day02 {
     /**
@@ -48,11 +49,7 @@ class Day02 {
     val regex = """Game (\d+): (.*)""".toRegex()
 
     private fun parseValidGame(inputLine: String) : Game? {
-        val maxColorToCounts = mapOf(
-            "red" to 12,
-            "green" to 13,
-            "blue" to 14
-        )
+        val maxColorToCounts = mapOf("red" to 12, "green" to 13, "blue" to 14)
 
         // E.g. "Game 69: 8 blue, 1 green, 4 red; 3 red, 11 blue, 9 green; 12 blue, 10 green; 1 red, 15 blue, 7 green"
         println("Parsing game $inputLine")
@@ -94,13 +91,79 @@ class Day02 {
         return Game(id, reveals)
     }
 
-    fun solvePuzzle2(input: List<String>): Nothing = TODO()
+    /**
+     * --- Part Two ---
+     *
+     * The Elf says they've stopped producing snow because they aren't getting any water! He isn't sure why the water stopped; however, he can show you how to get to the water source to check it out for yourself. It's just up ahead!
+     *
+     * As you continue your walk, the Elf poses a second question: in each game you played, what is the fewest number of cubes of each color that could have been in the bag to make the game possible?
+     *
+     * Again consider the example games from earlier:
+     *
+     * Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
+     *
+     * Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
+     *
+     * Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
+     *
+     * Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
+     *
+     * Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
+     *
+     * In game 1, the game could have been played with as few as 4 red, 2 green, and 6 blue cubes. If any color had even one fewer cube, the game would have been impossible.
+     * Game 2 could have been played with a minimum of 1 red, 3 green, and 4 blue cubes.
+     * Game 3 must have been played with at least 20 red, 13 green, and 6 blue cubes.
+     * Game 4 required at least 14 red, 3 green, and 15 blue cubes.
+     * Game 5 needed no fewer than 6 red, 3 green, and 2 blue cubes in the bag.
+     * The power of a set of cubes is equal to the numbers of red, green, and blue cubes multiplied together. The power of the minimum set of cubes in game 1 is 48. In games 2-5 it was 12, 1560, 630, and 36, respectively. Adding up these five powers produces the sum 2286.
+     *
+     * For each game, find the minimum set of cubes that must have been present. What is the sum of the power of these sets?
+     */
+    fun solvePuzzle2(input: List<String>) : Int = input
+        .map { inputLine -> evaluateMinimumSetOfCubesForGame(inputLine) }
+        .sumOf { minimumSetOfCubes ->
+            minimumSetOfCubes.values.reduce { acc, i -> acc * i }
+        }
+
+    private fun evaluateMinimumSetOfCubesForGame(inputLine: String) : Map<String, Int> {
+        val colorToCountMap = mutableMapOf<String, Int>()
+
+        // E.g. "Game 69: 8 blue, 1 green, 4 red; 3 red, 11 blue, 9 green; 12 blue, 10 green; 1 red, 15 blue, 7 green"
+        println("Parsing game $inputLine")
+
+        val matchResult = regex.matchEntire(inputLine)!!
+
+        // E.g. "69"
+        val id = matchResult.groups[1]!!.value.toInt()
+
+        // E.g. "8 blue, 1 green, 4 red; 3 red, 11 blue, 9 green; 12 blue, 10 green; 1 red, 15 blue, 7 green"
+        val gameNotes = matchResult.groups[2]!!.value
+
+        // E.g. "8 blue, 1 green, 4 red"
+        for (gameSet in gameNotes.split(';')) {
+
+            // E.g. "8 blue"
+            for (countAndColor in gameSet.split(',')) {
+                val value = countAndColor.trim().split(' ')
+                // E.g. "8"
+                val count = value[0].toInt()
+                // E.g. "blue"
+                val color = value[1]
+
+                colorToCountMap[color] = max(colorToCountMap[color] ?: count, count)
+            }
+        }
+
+        println("Minimum set of cubes: $colorToCountMap\n")
+        return colorToCountMap
+    }
+
 
     @ParameterizedTest
     @CsvSource(
         value = [
             "/day02-example1.txt,8",
-            "/day02-input1.txt,0"
+            "/day02-input1.txt,2149"
         ]
     )
     fun testPuzzle1(inputFile: String, result: String) {
@@ -111,8 +174,8 @@ class Day02 {
     @ParameterizedTest
     @CsvSource(
         value = [
-            "/day01-example2.txt,281",
-            "/day01-input1.txt,54649"
+            "/day02-example1.txt,2286",
+            "/day02-input1.txt,71274"
         ]
     )
     fun testPuzzle2(inputFile: String, result: String) {
