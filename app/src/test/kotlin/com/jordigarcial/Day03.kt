@@ -196,7 +196,7 @@ class Day03 {
     @CsvSource(
         value = [
             "/day03-example1.txt,467835",
-            "/day03-input1.txt,0"
+            "/day03-input1.txt,87287096"
         ]
     )
     fun testPuzzle2(inputFile: String, result: String) {
