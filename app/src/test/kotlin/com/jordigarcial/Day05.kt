@@ -6,41 +6,57 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
 class Day05 {
+    fun solvePuzzle1(input: List<String>): Long {
+        val seeds = regexSeeds.matchEntire(input[0])!!.groupValues[1]
+            .split(" ")
+            .map { it.toLong() }
+            .toSet()
 
-    fun solvePuzzle1(input: List<String>): Int {
-        val entireInput = input.joinToString("\n")
-
-        val seeds = regexSeeds.matchEntire(entireInput)!!.groupValues[1].split(" ").map { it.toInt() }.toSet()
         val srcToDst = mutableMapOf<String, String>()
-        val srcToMappings = mutableMapOf<String, MutableMap<Int, Int>>()
+        val srcToMappings = mutableMapOf<String, MutableMap<Long, Long>>()
 
-        regexMappingsHeading.findAll(entireInput).forEach { matchResult ->
-            val src = matchResult.groupValues[1]
-            val dst = matchResult.groupValues[2]
-            srcToDst += src to dst
-            regexMappingsRow.findAll(matchResult.groupValues[3]).forEach { matchResult ->
-                val dstId = matchResult.groupValues[1].toInt()
-                val srcId = matchResult.groupValues[2].toInt()
-                val range = matchResult.groupValues[3].toInt()
-                for (i in 0 until range) {
-                    val mappings = srcToMappings.computeIfAbsent(src) { mutableMapOf() }
-                    mappings += (srcId + i) to (dstId + i)
+        var currentSrc: String? = null
+        for (i in 1 until input.size) {
+            val inputLine = input[i]
+            when {
+                inputLine.isBlank() -> {
+                    currentSrc = null
+                }
+                currentSrc == null -> {
+                    regexMappingsHeading.matchEntire(input[i])!!.let { matchResult ->
+                        val src = matchResult.groupValues[1]
+                        val dst = matchResult.groupValues[2]
+                        srcToDst += src to dst
+                        currentSrc = src
+                    }
+                }
+                else -> {
+                    regexMappingsRow.matchEntire(input[i])!!.let { matchResult ->
+                        val dstId = matchResult.groupValues[1].toLong()
+                        val srcId = matchResult.groupValues[2].toLong()
+                        val range = matchResult.groupValues[3].toLong()
+                        for (j in 0 until range) {
+                            val mappings = srcToMappings.computeIfAbsent(currentSrc!!) { mutableMapOf() }
+                            mappings += (srcId + j) to (dstId + j)
+                        }
+                    }
                 }
             }
         }
 
         return seeds.minOf { seed ->
-            println("=== evaluating $seed ===")
-            evaluateLocationDstNumber(srcToDst, srcToMappings, srcNumber = seed)
+            evaluateLocationDstNumber(srcToDst, srcToMappings, srcNumber = seed).also {
+                println("Evaluating $seed: location $it")
+            }
         }
     }
 
     private fun evaluateLocationDstNumber(
         srcToDst: MutableMap<String, String>,
-        srcToMappings: Map<String, Map<Int, Int>>,
-        srcNumber: Int,
+        srcToMappings: Map<String, Map<Long, Long>>,
+        srcNumber: Long,
         src: String = "seed"
-    ): Int {
+    ): Long {
         println(srcNumber)
         println(src)
 
@@ -53,17 +69,11 @@ class Day05 {
         return evaluateLocationDstNumber(srcToDst, srcToMappings, srcNumber = dstNumber, src = dstSrc)
     }
 
-    var regexSeeds = Regex("""
-        seeds:\s+(.*)(?:.|\n)*
-    """.trimIndent())
-    var regexMappingsHeading = Regex("""
-        (\w+)-to-(\w+)\s*map:\s*((?:\d+\s*)+)
-    """.trimIndent())
-    var regexMappingsRow = Regex("""
-        (\d+)\s+(\d+)\s+(\d+)\s+
-    """.trimIndent())
+    var regexSeeds = Regex("""seeds:\s+(.*)""")
+    var regexMappingsHeading = Regex("""(\w+)-to-(\w+)\s*map:\s*""")
+    var regexMappingsRow = Regex("""(\d+)\s+(\d+)\s+(\d+)""")
 
-    fun solvePuzzle2(input: List<String>): Int {
+    fun solvePuzzle2(input: List<String>): Long {
         return TODO("")
     }
 
@@ -76,7 +86,7 @@ class Day05 {
     )
     fun testPuzzle1(inputFile: String, result: String) {
         val input = IOUtils.readLines(javaClass.getResourceAsStream(inputFile), "UTF-8") as List<String>
-        assertEquals(Integer.parseInt(result), solvePuzzle1(input))
+        assertEquals(result.toLong(), solvePuzzle1(input))
     }
 
     @ParameterizedTest
@@ -88,6 +98,6 @@ class Day05 {
     )
     fun testPuzzle2(inputFile: String, result: String) {
         val input = IOUtils.readLines(javaClass.getResourceAsStream(inputFile), "UTF-8") as List<String>
-        assertEquals(Integer.parseInt(result), solvePuzzle2(input))
+        assertEquals(result.toLong(), solvePuzzle2(input))
     }
 }
